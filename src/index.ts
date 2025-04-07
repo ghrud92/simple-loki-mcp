@@ -4,13 +4,22 @@ import { z } from "zod";
 import { LokiClientError } from "./utils/errors.js";
 import { createLogger } from "./utils/logger.js";
 import { LokiClient } from "./utils/loki-client.js";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
 
 // 로거 생성
 const logger = createLogger("MCPServer");
 
+// package.json에서 버전 가져오기
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJsonPath = resolve(__dirname, "../package.json");
+const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+
 const server = new McpServer({
   name: "loki-query-server",
-  version: "1.0.0",
+  version: packageJson.version,
   description: "MCP server for querying Loki logs via logcli",
 });
 
