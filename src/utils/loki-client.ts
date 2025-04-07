@@ -7,7 +7,7 @@ import { LokiQueryBuilder, LokiQueryOptions } from "./loki-query-builder.js";
 
 const execFilePromise = util.promisify(execFile);
 
-// execFile 에러 타입 정의
+// execFile error type definition
 interface ExecError extends Error {
   stderr?: string;
   code?: number;
@@ -19,45 +19,45 @@ export class LokiClient {
   private logger = createLogger("LokiClient");
 
   /**
-   * LokiClient 생성자
-   * @param auth 의존성 주입을 위한 LokiAuth 인스턴스 (선택적)
-   * @param queryBuilder 의존성 주입을 위한 LokiQueryBuilder 인스턴스 (선택적)
+   * LokiClient constructor
+   * @param auth LokiAuth instance for dependency injection (optional)
+   * @param queryBuilder LokiQueryBuilder instance for dependency injection (optional)
    */
   constructor(auth?: LokiAuth, queryBuilder?: LokiQueryBuilder) {
     this.auth = auth || new LokiAuth();
     this.queryBuilder = queryBuilder || new LokiQueryBuilder();
-    this.logger.debug("LokiClient 초기화됨");
+    this.logger.debug("LokiClient initialized");
   }
 
   /**
-   * Loki 쿼리 실행
-   * @param query Loki 쿼리 문자열
-   * @param options 쿼리 옵션
-   * @returns 쿼리 결과
+   * Execute Loki query
+   * @param query Loki query string
+   * @param options query options
+   * @returns query result
    */
   async queryLoki(
     query: string,
     options: LokiQueryOptions = {}
   ): Promise<string> {
-    this.logger.debug("Loki 쿼리 실행", { query, options });
-    console.log("Loki 쿼리 실행", { query, options });
+    this.logger.debug("Executing Loki query", { query, options });
+    console.log("Executing Loki query", { query, options });
 
     try {
       const cmd = "logcli";
 
-      // 인증 인자
+      // Authentication arguments
       const authArgs = this.auth.getAuthArgs();
 
-      // 전역 옵션 (query 앞에 위치)
+      // Global options (placed before query)
       const globalArgs = this.queryBuilder.buildGlobalArgs(options);
 
-      // 쿼리 명령 (쿼리 문자열 없이)
+      // Query command (without query string)
       const queryCmd = ["query"];
 
-      // 쿼리 특정 옵션들
+      // Query specific options
       const querySpecificArgs: string[] = [];
 
-      // 시작 시간 옵션
+      // Start time option
       if (options.from) {
         querySpecificArgs.push(`--from=${options.from.toISOString()}`);
       } else {
@@ -65,30 +65,30 @@ export class LokiClient {
         querySpecificArgs.push(`--from=${oneHourAgo}`);
       }
 
-      // 종료 시간 옵션
+      // End time option
       if (options.to) {
         querySpecificArgs.push(`--to=${options.to.toISOString()}`);
       } else {
         querySpecificArgs.push(`--to=now`);
       }
 
-      // 결과 제한 옵션
+      // Result limit option
       if (options.limit) {
         querySpecificArgs.push(`--limit=${options.limit}`);
       }
 
-      // 배치 크기 옵션
+      // Batch size option
       if (options.batch) {
         querySpecificArgs.push(`--batch=${options.batch}`);
       }
 
-      // 결과 정렬 방향 옵션
+      // Result sorting direction option
       if (options.forward) {
         querySpecificArgs.push("--forward");
       }
 
-      // 최종 명령 배열 조합 (순서 중요)
-      // [인증 인자] [전역 옵션] query [쿼리 특정 인자] [쿼리 문자열]
+      // Final command array combination (order is important)
+      // [auth args] [global options] query [query specific args] [query string]
       const allArgs = [
         ...authArgs,
         ...globalArgs,
@@ -97,19 +97,19 @@ export class LokiClient {
         query,
       ];
 
-      this.logger.debug("로그 CLI 쿼리 명령어 실행", {
+      this.logger.debug("Executing log CLI query command", {
         cmd,
         args: allArgs,
       });
 
-      // 명령어 실행
+      // Execute command
       const { stdout } = await execFilePromise(cmd, allArgs);
       return stdout;
     } catch (error: unknown) {
       const execError = error as ExecError;
       const errorMsg =
         execError.stderr || execError.message || String(execError);
-      console.error("쿼리 실행 오류:", errorMsg);
+      console.error("Query execution error:", errorMsg);
 
       throw new LokiClientError(
         "query_execution_failed",
@@ -120,30 +120,33 @@ export class LokiClient {
   }
 
   /**
-   * 사용 가능한 모든 라벨 조회
-   * @returns 라벨 목록
+   * Get all available labels
+   * @returns list of labels
    */
   async getLabels(): Promise<string[]> {
-    this.logger.debug("라벨 목록 조회");
+    this.logger.debug("Retrieving label list");
 
     try {
       const cmd = "logcli";
 
-      // 인증 인자
+      // Authentication arguments
       const authArgs = this.auth.getAuthArgs();
 
-      // 라벨 명령
+      // Label command
       const labelCmd = ["labels"];
 
-      // 최종 명령 배열 조합
+      // Final command array combination
       const allArgs = [...authArgs, ...labelCmd];
 
-      this.logger.debug("로그 CLI 라벨 명령어 실행", { cmd, args: allArgs });
+      this.logger.debug("Executing log CLI labels command", {
+        cmd,
+        args: allArgs,
+      });
 
-      // execFile 사용 - 쉘 해석 방지
+      // Use execFile - prevent shell interpretation
       const { stdout } = await execFilePromise(cmd, allArgs);
 
-      // 결과 파싱 (줄 단위로 분할하고 공백 제거)
+      // Parse results (split by line and remove empty lines)
       const labels = stdout
         .split("\n")
         .map((line) => line.trim())
@@ -154,7 +157,10 @@ export class LokiClient {
       const execError = error as ExecError;
       const errorMsg =
         execError.stderr || execError.message || String(execError);
-      this.logger.error("로그 CLI 실행 실패", { error: execError, errorMsg });
+      this.logger.error("Log CLI execution failed", {
+        error: execError,
+        errorMsg,
+      });
       throw new LokiClientError(
         "execution_failed",
         `LogCLI error: ${errorMsg}`,
@@ -164,34 +170,34 @@ export class LokiClient {
   }
 
   /**
-   * 특정 라벨의 모든 값 조회
-   * @param labelName 라벨 이름
-   * @returns 라벨 값 목록
+   * Get all values for a specific label
+   * @param labelName label name
+   * @returns list of label values
    */
   async getLabelValues(labelName: string): Promise<string[]> {
-    this.logger.debug("라벨 값 목록 조회", { labelName });
+    this.logger.debug("Retrieving label values list", { labelName });
 
     try {
       const cmd = "logcli";
 
-      // 인증 인자
+      // Authentication arguments
       const authArgs = this.auth.getAuthArgs();
 
-      // 라벨 명령 및 라벨 이름
+      // Label command and label name
       const labelCmd = ["labels", labelName];
 
-      // 최종 명령 배열 조합
+      // Final command array combination
       const allArgs = [...authArgs, ...labelCmd];
 
-      this.logger.debug("로그 CLI 라벨 값 명령어 실행", {
+      this.logger.debug("Executing log CLI label values command", {
         cmd,
         args: allArgs,
       });
 
-      // execFile 사용 - 쉘 해석 방지
+      // Use execFile - prevent shell interpretation
       const { stdout } = await execFilePromise(cmd, allArgs);
 
-      // 결과 파싱 (줄 단위로 분할하고 공백 제거)
+      // Parse results (split by line and remove empty lines)
       const labelValues = stdout
         .split("\n")
         .map((line) => line.trim())
@@ -199,11 +205,14 @@ export class LokiClient {
 
       return labelValues;
     } catch (error: unknown) {
-      // 타입 안전성 강화
+      // Enhance type safety
       const execError = error as ExecError;
       const errorMsg =
         execError.stderr || execError.message || String(execError);
-      this.logger.error("로그 CLI 실행 실패", { error: execError, errorMsg });
+      this.logger.error("Log CLI execution failed", {
+        error: execError,
+        errorMsg,
+      });
       throw new LokiClientError(
         "execution_failed",
         `LogCLI error: ${errorMsg}`,

@@ -1,8 +1,8 @@
 /**
- * 간단한 로깅 유틸리티
+ * Simple logging utility
  *
- * @param context 로그 컨텍스트 (보통 파일이나 클래스 이름)
- * @returns 로거 객체
+ * @param context Log context (typically file or class name)
+ * @returns Logger object
  */
 export function createLogger(context: string) {
   return {

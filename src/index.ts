@@ -8,10 +8,10 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
 
-// 로거 생성
+// Create logger
 const logger = createLogger("MCPServer");
 
-// package.json에서 버전 가져오기
+// Get version from package.json
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageJsonPath = resolve(__dirname, "../package.json");
@@ -25,9 +25,9 @@ const server = new McpServer({
 
 const lokiClient = new LokiClient();
 
-logger.info("서버 초기화 완료");
+logger.info("Server initialization complete");
 
-// 로키 쿼리 도구
+// Loki query tool
 server.tool(
   "query-loki",
   {
@@ -58,9 +58,9 @@ server.tool(
       .describe("Display results in chronological order"),
   },
   async ({ query, from, to, ...restOptions }) => {
-    logger.debug("Loki 쿼리 도구 실행", { query, from, to, restOptions });
+    logger.debug("Loki query tool execution", { query, from, to, restOptions });
 
-    // 디버깅을 위한 로그 추가
+    // Debug log
     console.log("Loki query tool called with:", {
       query,
       from,
@@ -76,7 +76,7 @@ server.tool(
         ...(to ? { to: new Date(to) } : {}),
       };
 
-      // 디버깅을 위한 로그 추가
+      // Debug log
       console.log("Constructed options:", options);
 
       const result = await lokiClient.queryLoki(query, options);
@@ -90,14 +90,14 @@ server.tool(
         ],
       };
     } catch (error) {
-      logger.error("Loki 쿼리 도구 실행 오류", { query, error });
+      logger.error("Loki query tool execution error", { query, error });
 
       const errorMessage =
         error instanceof LokiClientError
           ? `${error.message} (${error.code})`
           : `${error}`;
 
-      // 디버깅을 위한 로그 추가
+      // Debug log
       console.error("Loki query error:", errorMessage);
 
       return {
@@ -113,14 +113,14 @@ server.tool(
   }
 );
 
-// 라벨 값 조회 도구
+// Label values query tool
 server.tool(
   "get-label-values",
   {
     label: z.string().describe("Label name to get values for"),
   },
   async ({ label }) => {
-    logger.debug("라벨 값 조회 도구 실행", { label });
+    logger.debug("Label values query tool execution", { label });
 
     try {
       const values = await lokiClient.getLabelValues(label);
@@ -134,7 +134,7 @@ server.tool(
         ],
       };
     } catch (error) {
-      logger.error("라벨 값 조회 도구 실행 오류", { label, error });
+      logger.error("Label values query tool execution error", { label, error });
 
       const errorMessage =
         error instanceof LokiClientError
@@ -154,9 +154,9 @@ server.tool(
   }
 );
 
-// 모든 라벨 조회 도구
+// Get all labels tool
 server.tool("get-labels", {}, async () => {
-  logger.debug("모든 라벨 조회 도구 실행");
+  logger.debug("All labels query tool execution");
 
   try {
     const labels = await lokiClient.getLabels();
@@ -170,7 +170,7 @@ server.tool("get-labels", {}, async () => {
       ],
     };
   } catch (error) {
-    logger.error("라벨 조회 도구 실행 오류", { error });
+    logger.error("Labels query tool execution error", { error });
 
     const errorMessage =
       error instanceof LokiClientError
@@ -189,15 +189,15 @@ server.tool("get-labels", {}, async () => {
   }
 });
 
-// 서버 시작
+// Start server
 const transport = new StdioServerTransport();
 server
   .connect(transport)
   .then(() => {
-    logger.info("Loki MCP 서버가 시작되었습니다");
+    logger.info("Loki MCP server has started");
     console.log("Loki MCP server started");
   })
   .catch((err) => {
-    logger.error("서버 시작 실패", { error: err });
+    logger.error("Server start failed", { error: err });
     console.error("Failed to start server:", err);
   });

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createLogger } from "./logger.js";
 import { LokiAuthError } from "./errors.js";
 
-// Zod 스키마로 설정 유효성 검사
+// Config validation using Zod schema
 const LokiAuthConfigSchema = z.object({
   addr: z.string().url().optional(),
   username: z.string().optional(),
@@ -29,28 +29,32 @@ export class LokiAuth {
 
   constructor() {
     try {
-      // 환경 변수에서 설정 로드
+      // Load configuration from environment variables
       this.loadFromEnv();
 
-      // 설정 파일에서 로드 (환경 변수보다 우선순위 낮음)
+      // Load from config file (lower priority than environment variables)
       this.loadFromConfigFile();
 
-      // 설정 유효성 검사
+      // Validate configuration
       this.validateConfig();
 
-      this.logger.debug("인증 설정 로드 완료", { addr: this.config.addr });
+      this.logger.debug("Authentication configuration loaded", {
+        addr: this.config.addr,
+      });
     } catch (error) {
-      this.logger.error("인증 설정 로드 중 오류 발생", { error });
+      this.logger.error("Error loading authentication configuration", {
+        error,
+      });
       throw new LokiAuthError(
         "config_load_error",
-        "인증 설정을 로드하는 중 오류가 발생했습니다",
+        "An error occurred while loading authentication configuration",
         { cause: error as Error }
       );
     }
   }
 
   private loadFromEnv() {
-    // 환경 변수에서 설정 로드
+    // Load configuration from environment variables
     if (process.env.LOKI_ADDR) this.config.addr = process.env.LOKI_ADDR;
     if (process.env.LOKI_USERNAME)
       this.config.username = process.env.LOKI_USERNAME;
@@ -72,15 +76,15 @@ export class LokiAuth {
     if (process.env.LOKI_TLS_SKIP_VERIFY)
       this.config.tls_skip_verify = process.env.LOKI_TLS_SKIP_VERIFY === "true";
 
-    this.logger.debug("환경 변수에서 설정 로드됨");
+    this.logger.debug("Configuration loaded from environment variables");
   }
 
   private loadFromConfigFile() {
-    // 설정 파일 경로 (우선순위 순)
+    // Configuration file paths (in order of priority)
     const configPaths = [
-      process.env.LOKI_CONFIG_PATH, // 사용자 지정 경로
-      path.join(process.cwd(), "logcli-config.yaml"), // 현재 디렉토리
-      path.join(os.homedir(), ".logcli-config.yaml"), // 홈 디렉토리
+      process.env.LOKI_CONFIG_PATH, // Custom path
+      path.join(process.cwd(), "logcli-config.yaml"), // Current directory
+      path.join(os.homedir(), ".logcli-config.yaml"), // Home directory
     ].filter(Boolean) as string[];
 
     for (const configPath of configPaths) {
@@ -89,32 +93,34 @@ export class LokiAuth {
           const configContent = fs.readFileSync(configPath, "utf8");
           const parsedConfig = yaml.load(configContent) as LokiAuthConfig;
 
-          // 환경 변수에서 설정되지 않은 값만 설정 파일에서 로드
+          // Only load values from config file that are not set in environment variables
           this.config = { ...parsedConfig, ...this.config };
-          this.logger.debug(`설정 파일 로드됨: ${configPath}`);
+          this.logger.debug(`Configuration file loaded: ${configPath}`);
           break;
         } catch (error) {
-          this.logger.warn(`설정 파일 로드 실패: ${configPath}`, { error });
+          this.logger.warn(`Failed to load configuration file: ${configPath}`, {
+            error,
+          });
         }
       }
     }
   }
 
-  // 설정 유효성 검사
+  // Validate configuration
   private validateConfig() {
     try {
       LokiAuthConfigSchema.parse(this.config);
     } catch (error) {
-      this.logger.warn("Loki 설정 유효성 검사 실패", { error });
-      // 경고만 출력하고 오류로 처리하지는 않음 (선택적 필드이므로)
+      this.logger.warn("Loki configuration validation failed", { error });
+      // Only log a warning, don't treat as error (fields are optional)
     }
 
     if (!this.config.addr) {
-      this.logger.warn("Loki 서버 주소(addr)가 설정되지 않았습니다");
+      this.logger.warn("Loki server address (addr) is not configured");
     }
   }
 
-  // logcli 명령어에 인증 관련 인자 추가
+  // Add authentication arguments to logcli command
   public getAuthArgs(): string[] {
     const args: string[] = [];
 
@@ -137,14 +143,14 @@ export class LokiAuth {
     return args;
   }
 
-  // 현재 설정 정보 반환 (MCP 리소스로 노출 가능)
+  // Return current configuration info (can be exposed as MCP resource)
   public getConfig(): Partial<LokiAuthConfig> {
-    // 비밀번호와 토큰은 제외
+    // Password and token are excluded
     const { password, bearer_token, ...safeConfig } = this.config;
     return safeConfig;
   }
 
-  // 설정 유효성 확인
+  // Check if configuration is valid
   public isConfigValid(): boolean {
     return !!this.config.addr;
   }

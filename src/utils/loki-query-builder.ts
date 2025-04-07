@@ -1,5 +1,5 @@
 /**
- * Loki 쿼리 옵션 타입 정의
+ * Loki query options type definition
  */
 export interface LokiQueryOptions {
   from?: Date;
@@ -12,24 +12,24 @@ export interface LokiQueryOptions {
 }
 
 /**
- * Loki 쿼리 생성을 담당하는 클래스
- * 다양한 옵션을 받아 logcli 명령줄 인자로 변환합니다.
+ * Loki query builder class
+ * Converts various options to logcli command line arguments.
  */
 export class LokiQueryBuilder {
   /**
-   * 전역 옵션 인자 생성 (query 명령 이전에 위치)
-   * @param options 쿼리 옵션
-   * @returns 전역 명령줄 인자 배열
+   * Generate global option arguments (positioned before the query command)
+   * @param options query options
+   * @returns array of global command line arguments
    */
   public buildGlobalArgs(options: LokiQueryOptions = {}): string[] {
     const globalArgs: string[] = [];
 
-    // 간결한 출력 옵션 (전역 옵션)
+    // Quiet output option (global option)
     if (options.quiet) {
       globalArgs.push("--quiet");
     }
 
-    // 결과 형식 옵션 (전역 옵션)
+    // Output format option (global option)
     if (options.output) {
       globalArgs.push(`--output=${options.output}`);
     }
@@ -38,14 +38,14 @@ export class LokiQueryBuilder {
   }
 
   /**
-   * 쿼리 특정 옵션 인자 생성 (query 명령 이후에 위치)
-   * @param options 쿼리 옵션
-   * @returns 쿼리 특정 명령줄 인자 배열
+   * Generate query-specific option arguments (positioned after the query command)
+   * @param options query options
+   * @returns array of query-specific command line arguments
    */
   public buildQuerySpecificArgs(options: LokiQueryOptions = {}): string[] {
     const querySpecificArgs: string[] = [];
 
-    // 시작 시간 옵션
+    // Start time option
     if (options.from) {
       querySpecificArgs.push(`--from=${options.from.toISOString()}`);
     } else {
@@ -53,24 +53,24 @@ export class LokiQueryBuilder {
       querySpecificArgs.push(`--from=${oneHourAgo}`);
     }
 
-    // 종료 시간 옵션
+    // End time option
     if (options.to) {
       querySpecificArgs.push(`--to=${options.to.toISOString()}`);
     } else {
       querySpecificArgs.push(`--to=now`);
     }
 
-    // 결과 제한 옵션
+    // Result limit option
     if (options.limit) {
       querySpecificArgs.push(`--limit=${options.limit}`);
     }
 
-    // 배치 크기 옵션
+    // Batch size option
     if (options.batch) {
       querySpecificArgs.push(`--batch=${options.batch}`);
     }
 
-    // 결과 정렬 방향 옵션
+    // Result sorting direction option
     if (options.forward) {
       querySpecificArgs.push("--forward");
     }
@@ -79,8 +79,8 @@ export class LokiQueryBuilder {
   }
 
   /**
-   * 스트림 모드 특정 인자 생성
-   * @returns 스트림 모드 특정 인자 배열
+   * Generate stream mode specific arguments
+   * @returns array of stream mode specific arguments
    */
   public buildStreamArgs(): string[] {
     return ["--tail"];
