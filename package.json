@@ -2,15 +2,17 @@
   "name": "simple-loki-mcp",
   "version": "0.0.1",
   "description": "MCP server for querying Loki logs via logcli",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "postbuild": "chmod +x dist/src/index.js",
+    "start": "node dist/src/index.js",
     "dev": "ts-node --esm src/index.ts",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "lint": "eslint --ext .ts src/",
-    "lint:fix": "eslint --ext .ts src/ --fix"
+    "lint:fix": "eslint --ext .ts src/ --fix",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [],
   "author": "Hobart Kim <ghrud92@gmail.com>",
@@ -21,11 +23,12 @@
   },
   "files": [
     "dist",
+    "package.json",
     "README.md",
     "LICENSE.md"
   ],
   "bin": {
-    "simple-loki-mcp": "dist/index.js"
+    "simple-loki-mcp": "dist/src/index.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.8.0",
