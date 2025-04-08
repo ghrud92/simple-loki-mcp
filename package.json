@@ -1,5 +1,5 @@
 {
-  "name": "loki-mcp",
+  "name": "simple-loki-mcp",
   "version": "0.0.1",
   "description": "MCP server for querying Loki logs via logcli",
   "main": "dist/index.js",
@@ -13,8 +13,20 @@
     "lint:fix": "eslint --ext .ts src/ --fix"
   },
   "keywords": [],
-  "author": "",
+  "author": "Hobart Kim <ghrud92@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghrud92/simple-loki-mcp.git"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "bin": {
+    "simple-loki-mcp": "dist/index.js"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.8.0",
     "js-yaml": "^4.1.0",

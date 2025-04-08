@@ -1,4 +1,4 @@
-# Loki MCP Server
+# Simple Loki MCP Server
 
 Loki MCP Server is a [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/mcp) interface for querying Grafana Loki logs using `logcli`. The server enables AI assistants to access and analyze log data from Loki directly.
 
