@@ -21,7 +21,7 @@ Loki MCP Server is a [Model Context Protocol (MCP)](https://github.com/modelcont
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/loki-mcp.git
+git clone https://github.com/ghrud92/loki-mcp.git
 cd loki-mcp
 ```
 
