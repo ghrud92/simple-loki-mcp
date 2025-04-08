@@ -60,16 +60,11 @@ export class LokiClient {
       // Start time option
       if (options.from) {
         querySpecificArgs.push(`--from=${options.from.toISOString()}`);
-      } else {
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-        querySpecificArgs.push(`--from=${oneHourAgo}`);
       }
 
       // End time option
       if (options.to) {
         querySpecificArgs.push(`--to=${options.to.toISOString()}`);
-      } else {
-        querySpecificArgs.push(`--to=now`);
       }
 
       // Result limit option

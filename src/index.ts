@@ -37,11 +37,15 @@ server.tool(
     from: z
       .string()
       .optional()
-      .describe("Start timestamp in UTC (e.g. '2023-01-01T12:00:00Z')"),
+      .describe(
+        "Start timestamp in UTC (e.g. '2023-01-01T12:00:00Z'). Relative time expressions like '1h ago' are not supported. Use ISO 8601 format."
+      ),
     to: z
       .string()
       .optional()
-      .describe("End timestamp in UTC (e.g. '2023-01-01T13:00:00Z')"),
+      .describe(
+        "End timestamp in UTC (e.g. '2023-01-01T13:00:00Z'). Relative time expressions like 'now' are not supported. Use ISO 8601 format."
+      ),
     limit: z
       .number()
       .optional()
@@ -92,6 +96,13 @@ server.tool(
         ],
       };
     } catch (error) {
+      logger.debug("Loki query tool execution error details", {
+        error,
+        errorType: typeof error,
+        errorName: error instanceof Error ? error.name : undefined,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+      });
       logger.error("Loki query tool execution error", { query, error });
 
       const errorMessage =
