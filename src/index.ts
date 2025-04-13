@@ -3,7 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { LokiClientError, JsonRpcErrorCode } from "./utils/errors.js";
+import { LokiClientError, JsonRpcErrorCode, createJsonRpcError } from "./utils/errors.js";
 import { createLogger } from "./utils/logger.js";
 import { LokiClient } from "./utils/loki-client.js";
 import { readFileSync } from "fs";
@@ -105,33 +105,30 @@ server.tool(
       });
       logger.error("Loki query tool execution error", { query, error });
 
-      // Create structured error information
-      const errorCode = error instanceof LokiClientError 
-        ? error.jsonRpcCode 
-        : JsonRpcErrorCode.InternalError;
-        
-      const errorMessage = error instanceof LokiClientError
-        ? `${error.message} (code: ${error.jsonRpcCode}, ${error.code})`
-        : `${error}`;
-
-      // Construct error details
-      const errorDetails = error instanceof LokiClientError
-        ? error.details || {}
-        : {};
+      // Create standard JSON-RPC error object
+      const jsonRpcError = error instanceof LokiClientError
+        ? error.toJsonRpcError()
+        : createJsonRpcError(
+            JsonRpcErrorCode.InternalError,
+            error instanceof Error ? error.message : String(error),
+            {
+              query,
+              options: { from, to, ...restOptions },
+            }
+          );
 
       // Debug log
-      console.error("Loki query error:", errorMessage);
+      console.error("Loki query error:", jsonRpcError.message);
 
       return {
         content: [
           {
             type: "text",
-            text: `Error running Loki query: ${errorMessage}`,
+            text: `Error running Loki query: ${jsonRpcError.message}`,
           },
         ],
         isError: true,
-        errorCode: errorCode,
-        errorDetails: errorDetails
+        error: jsonRpcError
       };
     }
   }
@@ -160,30 +157,24 @@ server.tool(
     } catch (error) {
       logger.error("Label values query tool execution error", { label, error });
 
-      // Create structured error information
-      const errorCode = error instanceof LokiClientError 
-        ? error.jsonRpcCode 
-        : JsonRpcErrorCode.InternalError;
-        
-      const errorMessage = error instanceof LokiClientError
-        ? `${error.message} (code: ${error.jsonRpcCode}, ${error.code})`
-        : `${error}`;
-
-      // Construct error details
-      const errorDetails = error instanceof LokiClientError
-        ? error.details || {}
-        : {};
+      // Create standard JSON-RPC error object
+      const jsonRpcError = error instanceof LokiClientError
+        ? error.toJsonRpcError()
+        : createJsonRpcError(
+            JsonRpcErrorCode.InternalError,
+            error instanceof Error ? error.message : String(error),
+            { label }
+          );
 
       return {
         content: [
           {
             type: "text",
-            text: `Error getting label values: ${errorMessage}`,
+            text: `Error getting label values: ${jsonRpcError.message}`,
           },
         ],
         isError: true,
-        errorCode: errorCode,
-        errorDetails: errorDetails
+        error: jsonRpcError
       };
     }
   }
@@ -207,30 +198,23 @@ server.tool("get-labels", {}, async () => {
   } catch (error) {
     logger.error("Labels query tool execution error", { error });
 
-    // Create structured error information
-    const errorCode = error instanceof LokiClientError 
-      ? error.jsonRpcCode 
-      : JsonRpcErrorCode.InternalError;
-      
-    const errorMessage = error instanceof LokiClientError
-      ? `${error.message} (code: ${error.jsonRpcCode}, ${error.code})`
-      : `${error}`;
-
-    // Construct error details
-    const errorDetails = error instanceof LokiClientError
-      ? error.details || {}
-      : {};
+    // Create standard JSON-RPC error object
+    const jsonRpcError = error instanceof LokiClientError
+      ? error.toJsonRpcError()
+      : createJsonRpcError(
+          JsonRpcErrorCode.InternalError,
+          error instanceof Error ? error.message : String(error)
+        );
 
     return {
       content: [
         {
           type: "text",
-          text: `Error getting labels: ${errorMessage}`,
+          text: `Error getting labels: ${jsonRpcError.message}`,
         },
       ],
       isError: true,
-      errorCode: errorCode,
-      errorDetails: errorDetails
+      error: jsonRpcError
     };
   }
 });
@@ -244,15 +228,19 @@ server
     console.log("Loki MCP server started");
   })
   .catch((err) => {
-    // Log structured error information
-    const errorCode = err instanceof Error 
-      ? JsonRpcErrorCode.InternalError 
-      : JsonRpcErrorCode.ServerError;
+    // Create standard JSON-RPC error object for server errors
+    const jsonRpcError = createJsonRpcError(
+      JsonRpcErrorCode.ServerError,
+      err instanceof Error ? err.message : String(err),
+      {
+        name: err instanceof Error ? err.name : undefined,
+        stack: err instanceof Error ? err.stack : undefined
+      }
+    );
     
     logger.error("Server start failed", { 
-      error: err, 
-      errorCode: errorCode,
-      message: err instanceof Error ? err.message : String(err)
+      error: err,
+      jsonRpcError
     });
-    console.error("Failed to start server:", err);
+    console.error("Failed to start server:", jsonRpcError.message);
   });

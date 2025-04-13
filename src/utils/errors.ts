@@ -18,6 +18,30 @@ export enum JsonRpcErrorCode {
 }
 
 /**
+ * Standard JSON-RPC error response structure
+ */
+export interface JsonRpcError {
+  code: number;            // Numeric error code
+  message: string;         // Error message
+  data?: Record<string, any>; // Additional error data/details
+}
+
+/**
+ * Creates a standard JSON-RPC error object
+ */
+export function createJsonRpcError(
+  code: JsonRpcErrorCode, 
+  message: string, 
+  data?: Record<string, any>
+): JsonRpcError {
+  return {
+    code,
+    message,
+    data
+  };
+}
+
+/**
  * Mapping from string error codes to JSON-RPC error codes
  */
 export const ErrorCodeMapping: Record<string, JsonRpcErrorCode> = {
@@ -61,6 +85,20 @@ export class LokiClientError extends Error {
     // Assign JSON-RPC error code corresponding to the string code, or use ServerError as default
     this.jsonRpcCode = ErrorCodeMapping[code] || JsonRpcErrorCode.ServerError;
   }
+
+  /**
+   * Convert to standard JSON-RPC error object
+   */
+  toJsonRpcError(): JsonRpcError {
+    return createJsonRpcError(
+      this.jsonRpcCode,
+      this.message,
+      {
+        originalCode: this.code,
+        ...this.details
+      }
+    );
+  }
 }
 
 /**
@@ -83,5 +121,19 @@ export class LokiAuthError extends Error {
     
     // Assign JSON-RPC error code corresponding to the string code, or use AuthError as default
     this.jsonRpcCode = ErrorCodeMapping[code] || JsonRpcErrorCode.AuthError;
+  }
+
+  /**
+   * Convert to standard JSON-RPC error object
+   */
+  toJsonRpcError(): JsonRpcError {
+    return createJsonRpcError(
+      this.jsonRpcCode,
+      this.message,
+      {
+        originalCode: this.code,
+        ...this.details
+      }
+    );
   }
 }
