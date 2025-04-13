@@ -137,3 +137,55 @@ export class LokiAuthError extends Error {
     );
   }
 }
+
+/**
+ * MCP Tool response content item
+ */
+interface ToolResponseContentItem {
+  type: "text";
+  text: string;
+  [key: string]: unknown;
+}
+
+/**
+ * MCP Tool error response
+ */
+interface ToolErrorResponse {
+  content: ToolResponseContentItem[];
+  isError: true;
+  error: JsonRpcError;
+  [key: string]: unknown;
+}
+
+/**
+ * Creates a standardized MCP tool error response
+ * @param error Original error object
+ * @param contextMessage Error context message to display to the user
+ * @param contextData Additional context data to include in the error details
+ * @returns Formatted tool response with error information
+ */
+export function createToolErrorResponse(
+  error: Error | unknown,
+  contextMessage: string,
+  contextData?: Record<string, any>
+): ToolErrorResponse {
+  // Create standard JSON-RPC error object
+  const jsonRpcError = error instanceof LokiClientError || error instanceof LokiAuthError
+    ? (error as { toJsonRpcError(): JsonRpcError }).toJsonRpcError()
+    : createJsonRpcError(
+        JsonRpcErrorCode.InternalError,
+        error instanceof Error ? error.message : String(error),
+        contextData
+      );
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: `${contextMessage}: ${jsonRpcError.message}`,
+      },
+    ],
+    isError: true,
+    error: jsonRpcError
+  };
+}

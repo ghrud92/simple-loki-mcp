@@ -3,7 +3,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { LokiClientError, JsonRpcErrorCode, createJsonRpcError } from "./utils/errors.js";
+import { 
+  LokiClientError, 
+  JsonRpcErrorCode, 
+  createJsonRpcError,
+  createToolErrorResponse
+} from "./utils/errors.js";
 import { createLogger } from "./utils/logger.js";
 import { LokiClient } from "./utils/loki-client.js";
 import { readFileSync } from "fs";
@@ -19,6 +24,28 @@ const __dirname = dirname(__filename);
 const packageJsonPath = resolve(__dirname, "../package.json");
 const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
 
+// Handle server-level errors (transport, connection, etc.)
+function handleServerError(errorType: string, error: Error | unknown): void {
+  // Create a standard JSON-RPC error object
+  const jsonRpcError = createJsonRpcError(
+    JsonRpcErrorCode.ServerError,
+    error instanceof Error ? error.message : String(error),
+    {
+      name: error instanceof Error ? error.name : undefined,
+      stack: error instanceof Error ? error.stack : undefined,
+      errorType
+    }
+  );
+  
+  logger.error(`MCP ${errorType} error`, {
+    error,
+    jsonRpcError
+  });
+  
+  console.error(`${errorType} error:`, jsonRpcError.message);
+}
+
+// Create server
 const server = new McpServer({
   name: "loki-query-server",
   version: packageJson.version,
@@ -63,7 +90,7 @@ server.tool(
       .optional()
       .describe("Display results in chronological order"),
   },
-  async ({ query, from, to, ...restOptions }) => {
+  async ({ query, from, to, ...restOptions }, extra) => {
     logger.debug("Loki query tool execution", { query, from, to, restOptions });
 
     // Debug log
@@ -105,31 +132,15 @@ server.tool(
       });
       logger.error("Loki query tool execution error", { query, error });
 
-      // Create standard JSON-RPC error object
-      const jsonRpcError = error instanceof LokiClientError
-        ? error.toJsonRpcError()
-        : createJsonRpcError(
-            JsonRpcErrorCode.InternalError,
-            error instanceof Error ? error.message : String(error),
-            {
-              query,
-              options: { from, to, ...restOptions },
-            }
-          );
+      // Log the error
+      console.error("Loki query error:", error instanceof Error ? error.message : String(error));
 
-      // Debug log
-      console.error("Loki query error:", jsonRpcError.message);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Error running Loki query: ${jsonRpcError.message}`,
-          },
-        ],
-        isError: true,
-        error: jsonRpcError
-      };
+      // Create standardized error response
+      return createToolErrorResponse(
+        error,
+        "Error running Loki query",
+        { query, options: { from, to, ...restOptions } }
+      );
     }
   }
 );
@@ -140,7 +151,7 @@ server.tool(
   {
     label: z.string().describe("Label name to get values for"),
   },
-  async ({ label }) => {
+  async ({ label }, extra) => {
     logger.debug("Label values query tool execution", { label });
 
     try {
@@ -157,31 +168,18 @@ server.tool(
     } catch (error) {
       logger.error("Label values query tool execution error", { label, error });
 
-      // Create standard JSON-RPC error object
-      const jsonRpcError = error instanceof LokiClientError
-        ? error.toJsonRpcError()
-        : createJsonRpcError(
-            JsonRpcErrorCode.InternalError,
-            error instanceof Error ? error.message : String(error),
-            { label }
-          );
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Error getting label values: ${jsonRpcError.message}`,
-          },
-        ],
-        isError: true,
-        error: jsonRpcError
-      };
+      // Create standardized error response
+      return createToolErrorResponse(
+        error, 
+        "Error getting label values",
+        { label }
+      );
     }
   }
 );
 
 // Get all labels tool
-server.tool("get-labels", {}, async () => {
+server.tool("get-labels", {}, async (_args, extra) => {
   logger.debug("All labels query tool execution");
 
   try {
@@ -198,26 +196,64 @@ server.tool("get-labels", {}, async () => {
   } catch (error) {
     logger.error("Labels query tool execution error", { error });
 
-    // Create standard JSON-RPC error object
-    const jsonRpcError = error instanceof LokiClientError
-      ? error.toJsonRpcError()
-      : createJsonRpcError(
-          JsonRpcErrorCode.InternalError,
-          error instanceof Error ? error.message : String(error)
-        );
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error getting labels: ${jsonRpcError.message}`,
-        },
-      ],
-      isError: true,
-      error: jsonRpcError
-    };
+    // Create standardized error response
+    return createToolErrorResponse(
+      error,
+      "Error getting labels"
+    );
   }
 });
+
+// Initialize a wrapper to capture message handling errors
+// This function intercepts and handles errors that occur during message processing
+// allowing the server to continue operating despite transmission errors
+function setupErrorCaptureProxy(server: McpServer): void {
+  // Store original message handlers
+  const originalHandleMessage = (server as any)._handleMessage;
+  
+  if (typeof originalHandleMessage === 'function') {
+    // Replace with wrapped version
+    (server as any)._handleMessage = async function wrappedHandleMessage(message: unknown) {
+      try {
+        // Call original handler
+        return await originalHandleMessage.call(this, message);
+      } catch (error) {
+        // Handle any errors that occur during message processing
+        handleServerError("message-processing", error);
+        
+        // Return error response instead of crashing
+        return {
+          jsonrpc: "2.0",
+          id: (message as any)?.id,
+          error: error instanceof LokiClientError 
+            ? error.toJsonRpcError()
+            : createJsonRpcError(
+                JsonRpcErrorCode.InternalError, 
+                "Message processing error"
+              )
+        };
+      }
+    };
+    
+    logger.info("Message error capture proxy initialized");
+  } else {
+    logger.warn("Could not initialize message error capture proxy");
+  }
+}
+
+// Handle uncaught exceptions and unhandled rejections for transport errors
+process.on("uncaughtException", (error) => {
+  handleServerError("transport", error);
+  // Don't exit the process, just log the error
+});
+
+process.on("unhandledRejection", (reason) => {
+  handleServerError("transport", reason instanceof Error ? reason : new Error(String(reason)));
+  // Don't exit the process, just log the error
+});
+
+// Apply error capture before connecting
+setupErrorCaptureProxy(server);
 
 // Start server
 const transport = new StdioServerTransport();
@@ -228,19 +264,5 @@ server
     console.log("Loki MCP server started");
   })
   .catch((err) => {
-    // Create standard JSON-RPC error object for server errors
-    const jsonRpcError = createJsonRpcError(
-      JsonRpcErrorCode.ServerError,
-      err instanceof Error ? err.message : String(err),
-      {
-        name: err instanceof Error ? err.name : undefined,
-        stack: err instanceof Error ? err.stack : undefined
-      }
-    );
-    
-    logger.error("Server start failed", { 
-      error: err,
-      jsonRpcError
-    });
-    console.error("Failed to start server:", jsonRpcError.message);
+    handleServerError("connection", err);
   });
