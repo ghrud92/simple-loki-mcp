@@ -4,7 +4,7 @@ import yaml from "js-yaml";
 import os from "os";
 import { z } from "zod";
 import { createLogger } from "./logger.js";
-import { LokiAuthError } from "./errors.js";
+import { LokiAuthError, JsonRpcErrorCode } from "./errors.js";
 
 // Config validation using Zod schema
 const LokiAuthConfigSchema = z.object({
@@ -45,10 +45,22 @@ export class LokiAuth {
       this.logger.error("Error loading authentication configuration", {
         error,
       });
+      
+      // Structure error code and details
+      const cause = error as Error;
       throw new LokiAuthError(
         "config_load_error",
         "An error occurred while loading authentication configuration",
-        { cause: error as Error }
+        { 
+          cause: cause,
+          details: {
+            message: cause.message,
+            name: cause.name,
+            stack: cause.stack,
+            // Add original error's jsonRpcCode if available
+            errorCode: (cause as any).jsonRpcCode || JsonRpcErrorCode.ConfigError
+          }
+        }
       );
     }
   }

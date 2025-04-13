@@ -106,10 +106,23 @@ export class LokiClient {
         execError.stderr || execError.message || String(execError);
       console.error("Query execution error:", errorMsg);
 
+      // Assign more specific error code
+      const errorCode = execError.code 
+        ? `query_execution_failed_${execError.code}` // Specific error code based on exit code
+        : "query_execution_failed";
+
       throw new LokiClientError(
-        "query_execution_failed",
+        errorCode,
         `LogCLI query error: ${errorMsg}`,
-        { cause: execError }
+        { 
+          cause: execError,
+          details: {
+            query,
+            options,
+            exitCode: execError.code,
+            stderr: execError.stderr
+          }
+        }
       );
     }
   }
@@ -156,10 +169,23 @@ export class LokiClient {
         error: execError,
         errorMsg,
       });
+      
+      // Assign more specific error code
+      const errorCode = execError.code 
+        ? `execution_failed_${execError.code}` // Specific error code based on exit code
+        : "execution_failed";
+        
       throw new LokiClientError(
-        "execution_failed",
+        errorCode,
         `LogCLI error: ${errorMsg}`,
-        { cause: execError }
+        { 
+          cause: execError,
+          details: {
+            command: "labels",
+            exitCode: execError.code,
+            stderr: execError.stderr
+          }
+        }
       );
     }
   }
@@ -208,10 +234,24 @@ export class LokiClient {
         error: execError,
         errorMsg,
       });
+      
+      // Assign more specific error code
+      const errorCode = execError.code 
+        ? `execution_failed_${execError.code}` // Specific error code based on exit code
+        : "execution_failed";
+        
       throw new LokiClientError(
-        "execution_failed",
+        errorCode,
         `LogCLI error: ${errorMsg}`,
-        { cause: execError }
+        { 
+          cause: execError,
+          details: {
+            command: "labels",
+            labelName,
+            exitCode: execError.code,
+            stderr: execError.stderr
+          }
+        }
       );
     }
   }
