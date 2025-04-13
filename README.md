@@ -18,6 +18,24 @@ Loki MCP Server is a [Model Context Protocol (MCP)](https://github.com/modelcont
 
 ## Installation
 
+### for MCP
+
+```json
+{
+  "mcpServers": {
+    "simple-loki": {
+      "command": "npx",
+      "args": ["-y", "simple-loki-mcp"],
+      "env": {
+        "LOKI_ADDR": "https://loki.sup.band"
+      }
+    }
+  }
+}
+```
+
+### npm
+
 1. Clone the repository:
 
 ```bash
@@ -36,6 +54,37 @@ npm install
 ```bash
 npm run build
 ```
+
+## Available MCP Tools
+
+### query-loki
+
+Query logs from Loki with filtering options.
+
+Parameters:
+
+- `query` (required): Loki query string (LogQL)
+- `from`: Start timestamp (e.g. "2023-01-01T12:00:00Z")
+- `to`: End timestamp (e.g. "2023-01-01T13:00:00Z")
+- `limit`: Maximum number of logs to return
+- `batch`: Batch size for query results
+- `output`: Output format ("default", "raw", or "jsonl")
+- `quiet`: Suppress query metadata
+- `forward`: Display results in chronological order
+
+### get-label-values
+
+Retrieve all values for a specific label.
+
+Parameters:
+
+- `label` (required): Label name to get values for
+
+### get-labels
+
+Retrieve all available labels.
+
+No parameters required.
 
 ## Configuration
 
@@ -87,37 +136,6 @@ For development:
 ```bash
 npm run dev
 ```
-
-## Available MCP Tools
-
-### query-loki
-
-Query logs from Loki with filtering options.
-
-Parameters:
-
-- `query` (required): Loki query string (LogQL)
-- `from`: Start timestamp (e.g. "2023-01-01T12:00:00Z")
-- `to`: End timestamp (e.g. "2023-01-01T13:00:00Z")
-- `limit`: Maximum number of logs to return
-- `batch`: Batch size for query results
-- `output`: Output format ("default", "raw", or "jsonl")
-- `quiet`: Suppress query metadata
-- `forward`: Display results in chronological order
-
-### get-label-values
-
-Retrieve all values for a specific label.
-
-Parameters:
-
-- `label` (required): Label name to get values for
-
-### get-labels
-
-Retrieve all available labels.
-
-No parameters required.
 
 ## Development
 
