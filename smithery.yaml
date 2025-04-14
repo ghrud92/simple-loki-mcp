@@ -1,0 +1,66 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - lokiAddr
+    properties:
+      lokiAddr:
+        type: string
+        description: Loki server address (required)
+      lokiUsername:
+        type: string
+        description: Username for authentication if needed
+      lokiPassword:
+        type: string
+        description: Password for authentication if needed
+      lokiTenantId:
+        type: string
+        description: Tenant ID for multi-tenant setups
+      lokiBearerToken:
+        type: string
+        description: Bearer token for authentication
+      lokiBearerTokenFile:
+        type: string
+        description: File path for bearer token
+      lokiCAFile:
+        type: string
+        description: Path to custom CA file for TLS
+      lokiCertFile:
+        type: string
+        description: Path to client certificate file for TLS
+      lokiKeyFile:
+        type: string
+        description: Path to client key file for TLS
+      lokiTLSkipVerify:
+        type: boolean
+        description: Skip TLS verification
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({
+      command: 'node',
+      args: ['dist/src/index.js'],
+      env: {
+        LOKI_ADDR: config.lokiAddr,
+        ...(config.lokiUsername && { LOKI_USERNAME: config.lokiUsername }),
+        ...(config.lokiPassword && { LOKI_PASSWORD: config.lokiPassword }),
+        ...(config.lokiTenantId && { LOKI_TENANT_ID: config.lokiTenantId }),
+        ...(config.lokiBearerToken && { LOKI_BEARER_TOKEN: config.lokiBearerToken }),
+        ...(config.lokiBearerTokenFile && { LOKI_BEARER_TOKEN_FILE: config.lokiBearerTokenFile }),
+        ...(config.lokiCAFile && { LOKI_CA_FILE: config.lokiCAFile }),
+        ...(config.lokiCertFile && { LOKI_CERT_FILE: config.lokiCertFile }),
+        ...(config.lokiKeyFile && { LOKI_KEY_FILE: config.lokiKeyFile }),
+        ...(typeof config.lokiTLSkipVerify === 'boolean' && { LOKI_TLS_SKIP_VERIFY: String(config.lokiTLSkipVerify) })
+      }
+    })
+  exampleConfig:
+    lokiAddr: https://loki.example.com
+    lokiUsername: user
+    lokiPassword: pass
+    lokiTenantId: tenant
+    lokiBearerToken: dummy_bearer_token
+    lokiTLSkipVerify: true
