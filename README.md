@@ -1,5 +1,7 @@
 # Simple Loki MCP Server
 
+[![smithery badge](https://smithery.ai/badge/@ghrud92/simple-loki-mcp)](https://smithery.ai/server/@ghrud92/simple-loki-mcp)
+
 Loki MCP Server is a [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/mcp) interface for querying Grafana Loki logs using `logcli`. The server enables AI assistants to access and analyze log data from Loki directly.
 
 ## Features
@@ -17,6 +19,14 @@ Loki MCP Server is a [Model Context Protocol (MCP)](https://github.com/modelcont
 - Access to a Loki server instance
 
 ## Installation
+
+### Installing via Smithery
+
+To install Simple Loki MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@ghrud92/simple-loki-mcp):
+
+```bash
+npx -y @smithery/cli install @ghrud92/simple-loki-mcp --client claude
+```
 
 ### for MCP
 
