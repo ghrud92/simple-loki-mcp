@@ -1,6 +1,6 @@
 {
   "name": "simple-loki-mcp",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "MCP server for querying Loki logs via logcli",
   "main": "dist/src/index.js",
   "type": "module",
