@@ -3,11 +3,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { 
-  LokiClientError, 
-  JsonRpcErrorCode, 
+import {
+  JsonRpcErrorCode,
   createJsonRpcError,
-  createToolErrorResponse
+  createToolErrorResponse,
 } from "./utils/errors.js";
 import { createLogger } from "./utils/logger.js";
 import { LokiClient } from "./utils/loki-client.js";
@@ -33,16 +32,14 @@ function handleServerError(errorType: string, error: Error | unknown): void {
     {
       name: error instanceof Error ? error.name : undefined,
       stack: error instanceof Error ? error.stack : undefined,
-      errorType
+      errorType,
     }
   );
-  
+
   logger.error(`MCP ${errorType} error`, {
     error,
-    jsonRpcError
+    jsonRpcError,
   });
-  
-  console.error(`${errorType} error:`, jsonRpcError.message);
 }
 
 // Create server
@@ -91,14 +88,12 @@ server.tool(
       .describe("Display results in chronological order"),
   },
   async ({ query, from, to, ...restOptions }, extra) => {
-    logger.debug("Loki query tool execution", { query, from, to, restOptions });
-
-    // Debug log
-    console.log("Loki query tool called with:", {
+    logger.debug("Loki query tool execution", {
       query,
       from,
       to,
       restOptions,
+      extra,
     });
 
     try {
@@ -108,9 +103,6 @@ server.tool(
         ...(from ? { from: new Date(from) } : {}),
         ...(to ? { to: new Date(to) } : {}),
       };
-
-      // Debug log
-      console.log("Constructed options:", options);
 
       const result = await lokiClient.queryLoki(query, options);
 
@@ -133,14 +125,16 @@ server.tool(
       logger.error("Loki query tool execution error", { query, error });
 
       // Log the error
-      console.error("Loki query error:", error instanceof Error ? error.message : String(error));
+      logger.error(
+        "Loki query error:",
+        error instanceof Error ? error.message : String(error)
+      );
 
       // Create standardized error response
-      return createToolErrorResponse(
-        error,
-        "Error running Loki query",
-        { query, options: { from, to, ...restOptions } }
-      );
+      return createToolErrorResponse(error, "Error running Loki query", {
+        query,
+        options: { from, to, ...restOptions },
+      });
     }
   }
 );
@@ -152,7 +146,7 @@ server.tool(
     label: z.string().describe("Label name to get values for"),
   },
   async ({ label }, extra) => {
-    logger.debug("Label values query tool execution", { label });
+    logger.debug("Label values query tool execution", { label, extra });
 
     try {
       const values = await lokiClient.getLabelValues(label);
@@ -169,18 +163,16 @@ server.tool(
       logger.error("Label values query tool execution error", { label, error });
 
       // Create standardized error response
-      return createToolErrorResponse(
-        error, 
-        "Error getting label values",
-        { label }
-      );
+      return createToolErrorResponse(error, "Error getting label values", {
+        label,
+      });
     }
   }
 );
 
 // Get all labels tool
 server.tool("get-labels", {}, async (_args, extra) => {
-  logger.debug("All labels query tool execution");
+  logger.debug("All labels query tool execution", { extra });
 
   try {
     const labels = await lokiClient.getLabels();
@@ -197,63 +189,42 @@ server.tool("get-labels", {}, async (_args, extra) => {
     logger.error("Labels query tool execution error", { error });
 
     // Create standardized error response
-    return createToolErrorResponse(
-      error,
-      "Error getting labels"
-    );
+    return createToolErrorResponse(error, "Error getting labels");
   }
 });
 
-// Initialize a wrapper to capture message handling errors
-// This function intercepts and handles errors that occur during message processing
-// allowing the server to continue operating despite transmission errors
-function setupErrorCaptureProxy(server: McpServer): void {
-  // Store original message handlers
-  const originalHandleMessage = (server as any)._handleMessage;
-  
-  if (typeof originalHandleMessage === 'function') {
-    // Replace with wrapped version
-    (server as any)._handleMessage = async function wrappedHandleMessage(message: unknown) {
-      try {
-        // Call original handler
-        return await originalHandleMessage.call(this, message);
-      } catch (error) {
-        // Handle any errors that occur during message processing
-        handleServerError("message-processing", error);
-        
-        // Return error response instead of crashing
-        return {
-          jsonrpc: "2.0",
-          id: (message as any)?.id,
-          error: error instanceof LokiClientError 
-            ? error.toJsonRpcError()
-            : createJsonRpcError(
-                JsonRpcErrorCode.InternalError, 
-                "Message processing error"
-              )
-        };
-      }
+// Initialize error handling for message processing
+// This function sets up appropriate event handlers for the server
+function setupErrorHandlers(server: McpServer): void {
+  try {
+    // Set up handlers for process-level errors
+    process.on("uncaughtException", (error) => {
+      handleServerError("transport", error);
+      // Don't exit the process, just log the error
+    });
+
+    process.on("unhandledRejection", (reason) => {
+      handleServerError(
+        "transport",
+        reason instanceof Error ? reason : new Error(String(reason))
+      );
+      // Don't exit the process, just log the error
+    });
+
+    // Add a handler for when the server is initialized
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (server.server as any).oninitialized = () => {
+      logger.info("Server fully initialized");
     };
-    
-    logger.info("Message error capture proxy initialized");
-  } else {
-    logger.warn("Could not initialize message error capture proxy");
+
+    logger.info("Error handlers initialized");
+  } catch (error) {
+    logger.warn("Could not initialize all error handlers", error);
   }
 }
 
-// Handle uncaught exceptions and unhandled rejections for transport errors
-process.on("uncaughtException", (error) => {
-  handleServerError("transport", error);
-  // Don't exit the process, just log the error
-});
-
-process.on("unhandledRejection", (reason) => {
-  handleServerError("transport", reason instanceof Error ? reason : new Error(String(reason)));
-  // Don't exit the process, just log the error
-});
-
-// Apply error capture before connecting
-setupErrorCaptureProxy(server);
+// Apply error handlers before connecting
+setupErrorHandlers(server);
 
 // Start server
 const transport = new StdioServerTransport();
@@ -261,7 +232,6 @@ server
   .connect(transport)
   .then(() => {
     logger.info("Loki MCP server has started");
-    console.log("Loki MCP server started");
   })
   .catch((err) => {
     handleServerError("connection", err);

@@ -40,7 +40,6 @@ export class LokiClient {
     options: LokiQueryOptions = {}
   ): Promise<string> {
     this.logger.debug("Executing Loki query", { query, options });
-    console.log("Executing Loki query", { query, options });
 
     try {
       const cmd = "logcli";
@@ -104,7 +103,6 @@ export class LokiClient {
       const execError = error as ExecError;
       const errorMsg =
         execError.stderr || execError.message || String(execError);
-      console.error("Query execution error:", errorMsg);
 
       // Assign more specific error code
       const errorCode = execError.code 
