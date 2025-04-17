@@ -45,21 +45,23 @@ export class LokiAuth {
       this.logger.error("Error loading authentication configuration", {
         error,
       });
-      
+
       // Structure error code and details
       const cause = error as Error;
       throw new LokiAuthError(
         "config_load_error",
         "An error occurred while loading authentication configuration",
-        { 
+        {
           cause: cause,
           details: {
             message: cause.message,
             name: cause.name,
             stack: cause.stack,
             // Add original error's jsonRpcCode if available
-            errorCode: (cause as any).jsonRpcCode || JsonRpcErrorCode.ConfigError
-          }
+            errorCode:
+              (cause as { jsonRpcCode?: JsonRpcErrorCode }).jsonRpcCode ||
+              JsonRpcErrorCode.ConfigError,
+          },
         }
       );
     }
@@ -158,6 +160,7 @@ export class LokiAuth {
   // Return current configuration info (can be exposed as MCP resource)
   public getConfig(): Partial<LokiAuthConfig> {
     // Password and token are excluded
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, bearer_token, ...safeConfig } = this.config;
     return safeConfig;
   }
