@@ -55,7 +55,7 @@ logger.info("Server initialization complete");
 
 // Loki query tool
 server.tool(
-  "query-loki",
+  "query_loki",
   {
     query: z.string().describe("Loki query string"),
     from: z
@@ -141,7 +141,7 @@ server.tool(
 
 // Label values query tool
 server.tool(
-  "get-label-values",
+  "get_label_values",
   {
     label: z.string().describe("Label name to get values for"),
   },
@@ -171,7 +171,7 @@ server.tool(
 );
 
 // Get all labels tool
-server.tool("get-labels", {}, async (_args, extra) => {
+server.tool("get_labels", {}, async (_args, extra) => {
   logger.debug("All labels query tool execution", { extra });
 
   try {
