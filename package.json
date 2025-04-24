@@ -30,7 +30,8 @@
     "simple-loki-mcp": "dist/src/index.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.8.0",
+    "@modelcontextprotocol/sdk": "^1.9.0",
+    "axios": "^1.8.4",
     "js-yaml": "^4.1.0",
     "zod": "^3.24.2"
   },
