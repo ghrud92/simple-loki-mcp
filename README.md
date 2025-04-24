@@ -14,12 +14,13 @@ Loki MCP Server is a [Model Context Protocol (MCP)](https://github.com/modelcont
 - Get label values and metadata
 - Authentication and configuration support via environment variables or config files
 - Provides formatted results in different output formats (default, raw, JSON lines)
+- Automatic fallback to HTTP API when `logcli` is not available in the environment
 
 ## Prerequisites
 
 - Node.js v16 or higher
 - TypeScript
-- [Grafana Loki logcli](https://grafana.com/docs/loki/latest/tools/logcli/) installed and accessible in your PATH
+- (Optional) [Grafana Loki logcli](https://grafana.com/docs/loki/latest/tools/logcli/) installed and accessible in your PATH. If `logcli` is not available, the server will automatically use the Loki HTTP API instead
 - Access to a Loki server instance
 
 ## Installation
@@ -120,6 +121,8 @@ You can configure Loki access using:
 - `LOKI_CONFIG_PATH`: Custom path to config file
 - `DEBUG`: Enable debug logging
 
+> **Note**: When the client is using the HTTP API mode (when `logcli` is not available), the same configuration parameters are used to authenticate and connect to the Loki server.
+
 ### Config Files
 
 Alternatively, create a `logcli-config.yaml` file in one of these locations:
@@ -150,6 +153,21 @@ For development:
 ```bash
 npm run dev
 ```
+
+## Implementation Details
+
+### Automatic Fallback to HTTP API
+
+The server will automatically check if `logcli` is installed and available in the environment:
+
+1. If `logcli` is available, it will be used for all queries, providing the full functionality of the CLI tool
+2. If `logcli` is not available, the server will automatically fall back to using the Loki HTTP API:
+   - No additional configuration is needed
+   - The same authentication parameters are used for the HTTP API
+   - Response formatting is consistent with the CLI output
+   - Default limit of 1000 logs per query is applied in both modes
+
+This automatic detection ensures that the server works seamlessly in different environments without manual configuration.
 
 ## Development
 
