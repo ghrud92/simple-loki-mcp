@@ -13,6 +13,7 @@ import { LokiClient } from "./utils/loki-client.js";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
+import { DEFAULT_LIMIT } from "./utils/loki-query-builder.js";
 
 // Create logger
 const logger = createLogger("MCPServer");
@@ -73,7 +74,12 @@ server.tool(
     limit: z
       .number()
       .optional()
-      .describe("Maximum number of logs to return. Maximum value is 5000"),
+      .refine((val) => val === undefined || val <= DEFAULT_LIMIT, {
+        message: `Maximum limit value is ${DEFAULT_LIMIT}`,
+      })
+      .describe(
+        `Maximum number of logs to return. Maximum value is ${DEFAULT_LIMIT}`
+      ),
     batch: z.number().optional().describe("Batch size for query results"),
     output: z
       .enum(["default", "raw", "jsonl"])

@@ -12,6 +12,11 @@ export interface LokiQueryOptions {
 }
 
 /**
+ * Default constants
+ */
+export const DEFAULT_LIMIT = 1000;
+
+/**
  * Loki query builder class
  * Converts various options to logcli command line arguments.
  */
@@ -63,6 +68,8 @@ export class LokiQueryBuilder {
     // Result limit option
     if (options.limit) {
       querySpecificArgs.push(`--limit=${options.limit}`);
+    } else {
+      querySpecificArgs.push(`--limit=${DEFAULT_LIMIT}`);
     }
 
     // Batch size option

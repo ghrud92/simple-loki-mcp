@@ -4,7 +4,11 @@ import util from "util";
 import { LokiClientError } from "./errors.js";
 import { createLogger } from "./logger.js";
 import { LokiAuth } from "./loki-auth.js";
-import { LokiQueryBuilder, LokiQueryOptions } from "./loki-query-builder.js";
+import {
+  LokiQueryBuilder,
+  LokiQueryOptions,
+  DEFAULT_LIMIT,
+} from "./loki-query-builder.js";
 
 const execFilePromise = util.promisify(execFile);
 
@@ -159,6 +163,8 @@ export class LokiClient {
       // Result limit option
       if (options.limit) {
         querySpecificArgs.push(`--limit=${options.limit}`);
+      } else {
+        querySpecificArgs.push(`--limit=${DEFAULT_LIMIT}`);
       }
 
       // Batch size option
@@ -247,8 +253,11 @@ export class LokiClient {
         params.end = options.to.toISOString();
       }
 
+      // Result limit option
       if (options.limit) {
         params.limit = options.limit.toString();
+      } else {
+        params.limit = DEFAULT_LIMIT.toString();
       }
 
       if (options.forward !== undefined) {
