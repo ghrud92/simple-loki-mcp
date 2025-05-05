@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/ghrud92-simple-loki-mcp-badge.png)](https://mseep.ai/app/ghrud92-simple-loki-mcp)
+
 # Simple Loki MCP Server
 
 [![smithery badge](https://smithery.ai/badge/@ghrud92/simple-loki-mcp)](https://smithery.ai/server/@ghrud92/simple-loki-mcp)
