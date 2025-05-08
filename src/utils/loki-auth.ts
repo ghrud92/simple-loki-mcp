@@ -134,29 +134,6 @@ export class LokiAuth {
     }
   }
 
-  // Add authentication arguments to logcli command
-  public getAuthArgs(): string[] {
-    const args: string[] = [];
-
-    if (this.config.addr) args.push(`--addr=${this.config.addr}`);
-    if (this.config.username) args.push(`--username=${this.config.username}`);
-    if (this.config.password) args.push(`--password=${this.config.password}`);
-    if (this.config.tenant_id)
-      args.push(`--tenant-id=${this.config.tenant_id}`);
-    if (this.config.bearer_token)
-      args.push(`--bearer-token=${this.config.bearer_token}`);
-    if (this.config.bearer_token_file)
-      args.push(`--bearer-token-file=${this.config.bearer_token_file}`);
-    if (this.config.ca_file) args.push(`--ca-file=${this.config.ca_file}`);
-    if (this.config.cert_file)
-      args.push(`--cert-file=${this.config.cert_file}`);
-    if (this.config.key_file) args.push(`--key-file=${this.config.key_file}`);
-    if (this.config.org_id) args.push(`--org-id=${this.config.org_id}`);
-    if (this.config.tls_skip_verify) args.push("--tls-skip-verify");
-
-    return args;
-  }
-
   // Return current configuration info (can be exposed as MCP resource)
   public getConfig(): Partial<LokiAuthConfig> {
     // Password and token are excluded

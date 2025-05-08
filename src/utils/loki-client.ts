@@ -1,6 +1,4 @@
 import axios, { AxiosError } from "axios";
-import { execFile } from "child_process";
-import util from "util";
 import { LokiClientError } from "./errors.js";
 import { createLogger } from "./logger.js";
 import { LokiAuth } from "./loki-auth.js";
@@ -9,14 +7,6 @@ import {
   LokiQueryOptions,
   DEFAULT_LIMIT,
 } from "./loki-query-builder.js";
-
-const execFilePromise = util.promisify(execFile);
-
-// execFile error type definition
-interface ExecError extends Error {
-  stderr?: string;
-  code?: number;
-}
 
 // Loki API response types
 interface LokiApiResponse {
@@ -47,7 +37,6 @@ export class LokiClient {
   private auth: LokiAuth;
   private queryBuilder: LokiQueryBuilder;
   private logger = createLogger("LokiClient");
-  private hasLogCli: boolean | null = null;
 
   /**
    * LokiClient constructor
@@ -61,29 +50,7 @@ export class LokiClient {
   }
 
   /**
-   * Check if logcli is available on the system
-   * @returns Promise<boolean> True if logcli is available
-   */
-  private async isLogCliAvailable(): Promise<boolean> {
-    // Return cached value if we've already checked
-    if (this.hasLogCli !== null) {
-      return this.hasLogCli;
-    }
-
-    try {
-      await execFilePromise("logcli", ["--version"]);
-      this.hasLogCli = true;
-      this.logger.debug("logcli is available");
-      return true;
-    } catch (error) {
-      this.hasLogCli = false;
-      this.logger.debug("logcli is not available, will use HTTP API");
-      return false;
-    }
-  }
-
-  /**
-   * Execute Loki query
+   * Execute Loki query (HTTP only)
    * @param query Loki query string
    * @param options query options
    * @returns query result
@@ -93,24 +60,14 @@ export class LokiClient {
     options: LokiQueryOptions = {}
   ): Promise<string> {
     this.logger.debug("Executing Loki query", { query, options });
-
     try {
-      // Check if logcli is available and use it if possible
-      if (await this.isLogCliAvailable()) {
-        return this.queryLokiViaLogCli(query, options);
-      } else {
-        return this.queryLokiViaHttp(query, options);
-      }
+      return this.queryLokiViaHttp(query, options);
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.logger.error("Loki query failed", { error, errorMsg });
-
-      // Re-throw if it's already a LokiClientError
       if (error instanceof LokiClientError) {
         throw error;
       }
-
-      // Create a new error with standard format
       throw new LokiClientError(
         "query_execution_failed",
         `Loki query error: ${errorMsg}`,
@@ -122,98 +79,6 @@ export class LokiClient {
           },
         }
       );
-    }
-  }
-
-  /**
-   * Execute Loki query using logcli
-   * @param query Loki query string
-   * @param options query options
-   * @returns query result
-   */
-  private async queryLokiViaLogCli(
-    query: string,
-    options: LokiQueryOptions = {}
-  ): Promise<string> {
-    try {
-      const cmd = "logcli";
-
-      // Authentication arguments
-      const authArgs = this.auth.getAuthArgs();
-
-      // Global options (placed before query)
-      const globalArgs = this.queryBuilder.buildGlobalArgs(options);
-
-      // Query command (without query string)
-      const queryCmd = ["query"];
-
-      // Query specific options
-      const querySpecificArgs: string[] = [];
-
-      // Start time option
-      if (options.from) {
-        querySpecificArgs.push(`--from=${options.from.toISOString()}`);
-      }
-
-      // End time option
-      if (options.to) {
-        querySpecificArgs.push(`--to=${options.to.toISOString()}`);
-      }
-
-      // Result limit option
-      if (options.limit) {
-        querySpecificArgs.push(`--limit=${options.limit}`);
-      } else {
-        querySpecificArgs.push(`--limit=${DEFAULT_LIMIT}`);
-      }
-
-      // Batch size option
-      if (options.batch) {
-        querySpecificArgs.push(`--batch=${options.batch}`);
-      }
-
-      // Result sorting direction option
-      if (options.forward) {
-        querySpecificArgs.push("--forward");
-      }
-
-      // Final command array combination (order is important)
-      // [auth args] [global options] query [query specific args] [query string]
-      const allArgs = [
-        ...authArgs,
-        ...globalArgs,
-        ...queryCmd,
-        ...querySpecificArgs,
-        query,
-      ];
-
-      this.logger.debug("Executing log CLI query command", {
-        cmd,
-        args: allArgs,
-      });
-
-      // Execute command
-      const { stdout } = await execFilePromise(cmd, allArgs);
-      return stdout;
-    } catch (error: unknown) {
-      const execError = error as ExecError;
-      const errorMsg =
-        execError.stderr || execError.message || String(execError);
-
-      // Assign more specific error code
-      const errorCode = execError.code
-        ? `query_execution_failed_${execError.code}` // Specific error code based on exit code
-        : "query_execution_failed";
-
-      throw new LokiClientError(errorCode, `LogCLI query error: ${errorMsg}`, {
-        cause: execError,
-        details: {
-          query,
-          options,
-          exitCode: execError.code,
-          stderr: execError.stderr,
-        },
-      });
     }
   }
 
@@ -437,29 +302,19 @@ export class LokiClient {
   }
 
   /**
-   * Get all available labels
+   * Get all available labels (HTTP only)
    * @returns list of labels
    */
   async getLabels(): Promise<string[]> {
     this.logger.debug("Retrieving label list");
-
     try {
-      // Check if logcli is available and use it if possible
-      if (await this.isLogCliAvailable()) {
-        return this.getLabelsViaLogCli();
-      } else {
-        return this.getLabelsViaHttp();
-      }
+      return this.getLabelsViaHttp();
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.logger.error("Getting labels failed", { error, errorMsg });
-
-      // Re-throw if it's already a LokiClientError
       if (error instanceof LokiClientError) {
         throw error;
       }
-
-      // Create a new error with standard format
       throw new LokiClientError(
         "execution_failed",
         `Failed to get labels: ${errorMsg}`,
@@ -470,63 +325,6 @@ export class LokiClient {
           },
         }
       );
-    }
-  }
-
-  /**
-   * Get all available labels using logcli
-   * @returns list of labels
-   */
-  private async getLabelsViaLogCli(): Promise<string[]> {
-    try {
-      const cmd = "logcli";
-
-      // Authentication arguments
-      const authArgs = this.auth.getAuthArgs();
-
-      // Label command
-      const labelCmd = ["labels"];
-
-      // Final command array combination
-      const allArgs = [...authArgs, ...labelCmd];
-
-      this.logger.debug("Executing log CLI labels command", {
-        cmd,
-        args: allArgs,
-      });
-
-      // Use execFile - prevent shell interpretation
-      const { stdout } = await execFilePromise(cmd, allArgs);
-
-      // Parse results (split by line and remove empty lines)
-      const labels = stdout
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line !== "");
-
-      return labels;
-    } catch (error: unknown) {
-      const execError = error as ExecError;
-      const errorMsg =
-        execError.stderr || execError.message || String(execError);
-      this.logger.error("Log CLI execution failed", {
-        error: execError,
-        errorMsg,
-      });
-
-      // Assign more specific error code
-      const errorCode = execError.code
-        ? `execution_failed_${execError.code}` // Specific error code based on exit code
-        : "execution_failed";
-
-      throw new LokiClientError(errorCode, `LogCLI error: ${errorMsg}`, {
-        cause: execError,
-        details: {
-          command: "labels",
-          exitCode: execError.code,
-          stderr: execError.stderr,
-        },
-      });
     }
   }
 
@@ -624,20 +422,14 @@ export class LokiClient {
   }
 
   /**
-   * Get all values for a specific label
+   * Get all values for a specific label (HTTP only)
    * @param labelName label name
    * @returns list of label values
    */
   async getLabelValues(labelName: string): Promise<string[]> {
     this.logger.debug("Retrieving label values list", { labelName });
-
     try {
-      // Check if logcli is available and use it if possible
-      if (await this.isLogCliAvailable()) {
-        return this.getLabelValuesViaLogCli(labelName);
-      } else {
-        return this.getLabelValuesViaHttp(labelName);
-      }
+      return this.getLabelValuesViaHttp(labelName);
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.logger.error("Getting label values failed", {
@@ -645,13 +437,9 @@ export class LokiClient {
         errorMsg,
         labelName,
       });
-
-      // Re-throw if it's already a LokiClientError
       if (error instanceof LokiClientError) {
         throw error;
       }
-
-      // Create a new error with standard format
       throw new LokiClientError(
         "execution_failed",
         `Failed to get label values: ${errorMsg}`,
@@ -663,66 +451,6 @@ export class LokiClient {
           },
         }
       );
-    }
-  }
-
-  /**
-   * Get all values for a specific label using logcli
-   * @param labelName label name
-   * @returns list of label values
-   */
-  private async getLabelValuesViaLogCli(labelName: string): Promise<string[]> {
-    try {
-      const cmd = "logcli";
-
-      // Authentication arguments
-      const authArgs = this.auth.getAuthArgs();
-
-      // Label command and label name
-      const labelCmd = ["labels", labelName];
-
-      // Final command array combination
-      const allArgs = [...authArgs, ...labelCmd];
-
-      this.logger.debug("Executing log CLI label values command", {
-        cmd,
-        args: allArgs,
-      });
-
-      // Use execFile - prevent shell interpretation
-      const { stdout } = await execFilePromise(cmd, allArgs);
-
-      // Parse results (split by line and remove empty lines)
-      const labelValues = stdout
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line !== "");
-
-      return labelValues;
-    } catch (error: unknown) {
-      // Enhance type safety
-      const execError = error as ExecError;
-      const errorMsg =
-        execError.stderr || execError.message || String(execError);
-      this.logger.error("Log CLI execution failed", {
-        error: execError,
-        errorMsg,
-      });
-
-      // Assign more specific error code
-      const errorCode = execError.code
-        ? `execution_failed_${execError.code}` // Specific error code based on exit code
-        : "execution_failed";
-
-      throw new LokiClientError(errorCode, `LogCLI error: ${errorMsg}`, {
-        cause: execError,
-        details: {
-          command: "labels",
-          labelName,
-          exitCode: execError.code,
-          stderr: execError.stderr,
-        },
-      });
     }
   }
 
