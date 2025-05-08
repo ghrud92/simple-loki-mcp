@@ -2,11 +2,7 @@ import axios, { AxiosError } from "axios";
 import { LokiClientError } from "./errors.js";
 import { createLogger } from "./logger.js";
 import { LokiAuth } from "./loki-auth.js";
-import {
-  LokiQueryBuilder,
-  LokiQueryOptions,
-  DEFAULT_LIMIT,
-} from "./loki-query-builder.js";
+import { LokiQueryOptions, DEFAULT_LIMIT } from "./loki-query-options.js";
 
 // Loki API response types
 interface LokiApiResponse {
@@ -35,17 +31,14 @@ interface LokiMatrix {
 
 export class LokiClient {
   private auth: LokiAuth;
-  private queryBuilder: LokiQueryBuilder;
   private logger = createLogger("LokiClient");
 
   /**
    * LokiClient constructor
    * @param auth LokiAuth instance for dependency injection (optional)
-   * @param queryBuilder LokiQueryBuilder instance for dependency injection (optional)
    */
-  constructor(auth?: LokiAuth, queryBuilder?: LokiQueryBuilder) {
+  constructor(auth?: LokiAuth) {
     this.auth = auth || new LokiAuth();
-    this.queryBuilder = queryBuilder || new LokiQueryBuilder();
     this.logger.debug("LokiClient initialized");
   }
 

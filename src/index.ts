@@ -13,7 +13,7 @@ import { LokiClient } from "./utils/loki-client.js";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
-import { DEFAULT_LIMIT } from "./utils/loki-query-builder.js";
+import { DEFAULT_LIMIT } from "./utils/loki-query-options.js";
 
 // Create logger
 const logger = createLogger("MCPServer");

@@ -1,5 +1,4 @@
 import { LokiClient } from "../../src/utils/loki-client.js";
-import { LokiQueryBuilder } from "../../src/utils/loki-query-builder.js";
 import { LokiAuth } from "../../src/utils/loki-auth.js";
 import axios from "axios";
 
@@ -40,7 +39,7 @@ describe("LokiClient", () => {
       getConfig: () => ({ addr: TEST_LOKI_ADDR }),
       getAuthArgs: () => [],
     } as unknown as LokiAuth;
-    client = new LokiClient(mockAuth, new LokiQueryBuilder());
+    client = new LokiClient(mockAuth);
   });
 
   it("should query the pushed log from Loki HTTP API", async () => {
