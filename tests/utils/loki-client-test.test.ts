@@ -51,21 +51,27 @@ describe("LokiClient", () => {
   });
 
   describe("getLabels", () => {
-    it("should retrieve available labels from Loki HTTP API", async () => {
-      const labels = await client.getLabels();
+    it("should retrieve available labels from Loki HTTP API as JSON string", async () => {
+      const labelsJson = await client.getLabels();
 
-      // Labels should be an array
-      expect(Array.isArray(labels)).toBe(true);
+      // Should be a JSON string
+      expect(typeof labelsJson).toBe("string");
+
+      // Parse the JSON string
+      const result = JSON.parse(labelsJson);
+
+      // Result should have a labels property that is an array
+      expect(Array.isArray(result.labels)).toBe(true);
 
       // Should contain the test label we pushed
-      expect(labels).toContain("test");
+      expect(result.labels).toContain("test");
 
       // Typically, Loki has some standard labels
       const commonLabels = ["job", "filename", "level"];
       commonLabels.forEach((label) => {
         // Some of these labels may not exist in all Loki setups, so we don't assert strictly
-        if (labels.includes(label)) {
-          expect(labels).toContain(label);
+        if (result.labels.includes(label)) {
+          expect(result.labels).toContain(label);
         }
       });
     });

@@ -181,13 +181,13 @@ server.tool("get_labels", {}, async (_args, extra) => {
   logger.debug("All labels query tool execution", { extra });
 
   try {
-    const labels = await lokiClient.getLabels();
+    const labelsJson = await lokiClient.getLabels();
 
     return {
       content: [
         {
           type: "text",
-          text: labels.join("\n"),
+          text: labelsJson,
         },
       ],
     };

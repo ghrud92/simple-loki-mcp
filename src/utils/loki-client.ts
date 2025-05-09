@@ -296,12 +296,13 @@ export class LokiClient {
 
   /**
    * Get all available labels (HTTP only)
-   * @returns list of labels
+   * @returns JSON string with labels list in format {"labels": [...]}
    */
-  async getLabels(): Promise<string[]> {
+  async getLabels(): Promise<string> {
     this.logger.debug("Retrieving label list");
     try {
-      return this.getLabelsViaHttp();
+      const labels = await this.getLabelsViaHttp();
+      return JSON.stringify({ labels });
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.logger.error("Getting labels failed", { error, errorMsg });
