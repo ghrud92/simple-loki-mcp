@@ -418,12 +418,13 @@ export class LokiClient {
   /**
    * Get all values for a specific label (HTTP only)
    * @param labelName label name
-   * @returns list of label values
+   * @returns JSON string with label values in format {"values": [...]}
    */
-  async getLabelValues(labelName: string): Promise<string[]> {
+  async getLabelValues(labelName: string): Promise<string> {
     this.logger.debug("Retrieving label values list", { labelName });
     try {
-      return this.getLabelValuesViaHttp(labelName);
+      const values = await this.getLabelValuesViaHttp(labelName);
+      return JSON.stringify({ values });
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.logger.error("Getting label values failed", {

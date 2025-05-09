@@ -78,14 +78,20 @@ describe("LokiClient", () => {
   });
 
   describe("getLabelValues", () => {
-    it("should retrieve values for a specific label from Loki HTTP API", async () => {
-      const labelValues = await client.getLabelValues("test");
+    it("should retrieve values for a specific label from Loki HTTP API as JSON string", async () => {
+      const valuesJson = await client.getLabelValues("test");
 
-      // Label values should be an array
-      expect(Array.isArray(labelValues)).toBe(true);
+      // Should be a JSON string
+      expect(typeof valuesJson).toBe("string");
+
+      // Parse the JSON string
+      const result = JSON.parse(valuesJson);
+
+      // Result should have a values property that is an array
+      expect(Array.isArray(result.values)).toBe(true);
 
       // Should contain the value we pushed
-      expect(labelValues).toContain("loki-client-test");
+      expect(result.values).toContain("loki-client-test");
     });
   });
 

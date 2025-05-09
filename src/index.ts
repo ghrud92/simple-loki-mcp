@@ -155,13 +155,13 @@ server.tool(
     logger.debug("Label values query tool execution", { label, extra });
 
     try {
-      const values = await lokiClient.getLabelValues(label);
+      const valuesJson = await lokiClient.getLabelValues(label);
 
       return {
         content: [
           {
             type: "text",
-            text: values.join("\n"),
+            text: valuesJson,
           },
         ],
       };
