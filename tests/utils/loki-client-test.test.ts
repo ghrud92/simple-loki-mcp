@@ -1,6 +1,7 @@
 import { LokiClient } from "../../src/utils/loki-client.js";
 import { LokiAuth } from "../../src/utils/loki-auth.js";
 import axios from "axios";
+import { LokiClientError } from "../../src/utils/errors.js";
 
 const TEST_LOKI_ADDR = "http://localhost:3100";
 const TEST_LABELS = '{test="loki-client-test"}';
@@ -42,8 +43,81 @@ describe("LokiClient", () => {
     client = new LokiClient(mockAuth);
   });
 
-  it("should query the pushed log from Loki HTTP API", async () => {
-    const result = await client.queryLoki(TEST_LABELS, { limit: 10 });
-    expect(result).toContain(TEST_LINE);
+  describe("queryLoki", () => {
+    it("should query the pushed log from Loki HTTP API", async () => {
+      const result = await client.queryLoki(TEST_LABELS, { limit: 10 });
+      expect(result).toContain(TEST_LINE);
+    });
+  });
+
+  describe("getLabels", () => {
+    it("should retrieve available labels from Loki HTTP API", async () => {
+      const labels = await client.getLabels();
+
+      // Labels should be an array
+      expect(Array.isArray(labels)).toBe(true);
+
+      // Should contain the test label we pushed
+      expect(labels).toContain("test");
+
+      // Typically, Loki has some standard labels
+      const commonLabels = ["job", "filename", "level"];
+      commonLabels.forEach((label) => {
+        // Some of these labels may not exist in all Loki setups, so we don't assert strictly
+        if (labels.includes(label)) {
+          expect(labels).toContain(label);
+        }
+      });
+    });
+  });
+
+  describe("getLabelValues", () => {
+    it("should retrieve values for a specific label from Loki HTTP API", async () => {
+      const labelValues = await client.getLabelValues("test");
+
+      // Label values should be an array
+      expect(Array.isArray(labelValues)).toBe(true);
+
+      // Should contain the value we pushed
+      expect(labelValues).toContain("loki-client-test");
+    });
+  });
+
+  describe("Error handling", () => {
+    let errorClient: LokiClient;
+
+    beforeEach(() => {
+      // Create a client with invalid Loki address
+      const errorMockAuth = {
+        getConfig: () => ({ addr: "http://non-existent-loki:9999" }),
+        getAuthArgs: () => [],
+      } as unknown as LokiAuth;
+      errorClient = new LokiClient(errorMockAuth);
+    });
+
+    it("should handle connection errors when getting labels", async () => {
+      await expect(errorClient.getLabels()).rejects.toThrow(LokiClientError);
+      await expect(errorClient.getLabels()).rejects.toMatchObject({
+        code: "http_query_error",
+      });
+    });
+
+    it("should handle connection errors when getting label values", async () => {
+      await expect(errorClient.getLabelValues("test")).rejects.toThrow(
+        LokiClientError
+      );
+      await expect(errorClient.getLabelValues("test")).rejects.toMatchObject({
+        code: "http_query_error",
+      });
+    });
+
+    it("should handle connection errors when querying logs", async () => {
+      await expect(errorClient.queryLoki(TEST_LABELS)).rejects.toThrow(
+        LokiClientError
+      );
+      await expect(errorClient.queryLoki(TEST_LABELS)).rejects.toMatchObject({
+        code: "http_query_error",
+      });
+    });
   });
 });

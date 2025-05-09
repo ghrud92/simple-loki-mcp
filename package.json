@@ -8,6 +8,7 @@
     "build": "tsc",
     "postbuild": "chmod +x dist/src/index.js",
     "start": "node dist/src/index.js",
+    "pretest": "tsc -p tsconfig.test.json --noEmit",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "lint": "eslint --ext .ts src/",
     "lint:fix": "eslint --ext .ts src/ --fix",
