@@ -1,6 +1,6 @@
 # Simple Loki MCP Server
 
-[![smithery badge](https://smithery.ai/badge/@ghrud92/simple-loki-mcp)](https://smithery.ai/server/@ghrud92/simple-loki-mcp)
+[![LightNow capabilities](https://lightnow.ai/badge/io.github.ghrud92/simple-loki-mcp)](https://lightnow.ai/servers/io.github.ghrud92/simple-loki-mcp)
 
 Loki MCP Server is a [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/mcp) interface for querying Grafana Loki logs using `logcli`. The server enables AI assistants to access and analyze log data from Loki directly.
 
